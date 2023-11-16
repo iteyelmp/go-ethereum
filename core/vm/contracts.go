@@ -1185,14 +1185,19 @@ func (e *esGetBlob) Run(input []byte) ([]byte, error) {
 	}
 
 	kvIndex := new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
-	off := new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
-	len := new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
-	hash := input[96:128]
+	needDecode := false
+	needDecodeInt := new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
+	if needDecodeInt == 1 {
+		needDecode = true
+	}
+	off := new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
+	len := new(big.Int).SetBytes(getData(input, 96, 32)).Uint64()
+	hash := input[128:160]
 
-	return getBlobFromEsNode(kvIndex, hash, off, len)
+	return getBlobFromEsNode(kvIndex, hash, needDecode, off, len)
 }
 
-func getBlobFromEsNode(kvIndex uint64, blobHash []byte, off, len uint64) ([]byte, error) {
+func getBlobFromEsNode(kvIndex uint64, blobHash []byte, needDecode bool, off, len uint64) ([]byte, error) {
 	var err error
 	ctx := context.Background()
 	if rpcCli == nil {
@@ -1211,6 +1216,6 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, off, len uint64) ([]byte
 		callCtx,
 		&result,
 		"es_getBlob",
-		kvIndex, "0x"+common.Bytes2Hex(blobHash), off, len)
+		kvIndex, "0x"+common.Bytes2Hex(blobHash), needDecode, off, len)
 	return result, err
 }
