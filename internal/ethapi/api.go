@@ -1166,12 +1166,7 @@ func (s *BlockChainAPI) Call(ctx context.Context, args TransactionArgs, blockNrO
 		latest := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 		blockNrOrHash = &latest
 	}
-
-	gasCap := s.b.RPCGasCap()
-	if ctx.Value(esKey{}) == true {
-		gasCap = params.ESRPCGasCap
-	}
-	result, err := DoCall(ctx, s.b, args, *blockNrOrHash, overrides, blockOverrides, s.b.RPCEVMTimeout(), gasCap)
+	result, err := DoCall(ctx, s.b, args, *blockNrOrHash, overrides, blockOverrides, s.b.RPCEVMTimeout(), s.b.RPCGasCap())
 	if err != nil {
 		return nil, err
 	}

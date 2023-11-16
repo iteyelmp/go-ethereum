@@ -1159,10 +1159,15 @@ func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
 // esGetBlob calls rpc on es-node to get blob data.
 type esGetBlob struct{}
 
+type DecodeType uint64
+
 const (
-	esGetBlobInputLength = 128
-	maxDataLenLimitation = 131072 // blob size in proto-danksharding
-	defaultCallTimeout   = 1 * time.Second
+	esGetBlobInputLength  = 160
+	maxDataWordLenPerBlob = 4096 // blob size in proto-danksharding
+	defaultCallTimeout    = 1 * time.Second
+
+	RawData DecodeType = iota
+	PaddingPer31Bytes
 )
 
 var (
@@ -1172,11 +1177,13 @@ var (
 
 func (e *esGetBlob) RequiredGas(input []byte) uint64 {
 	if len(input) != esGetBlobInputLength {
-		return params.EsGetBlobPerByteGas*maxDataLenLimitation + params.EsGetBlobBaseGas
+		return params.EsGetBlobPerWordGas*maxDataWordLenPerBlob + params.EsGetBlobBaseGas
 	}
 
 	len := new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
-	return params.EsGetBlobPerByteGas*len + params.EsGetBlobBaseGas
+	size := (len + 31) / 32
+
+	return params.EsGetBlobPerWordGas*size + params.EsGetBlobBaseGas
 }
 
 func (e *esGetBlob) Run(input []byte) ([]byte, error) {
@@ -1185,19 +1192,16 @@ func (e *esGetBlob) Run(input []byte) ([]byte, error) {
 	}
 
 	kvIndex := new(big.Int).SetBytes(getData(input, 0, 32)).Uint64()
-	needDecode := false
-	needDecodeInt := new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
-	if needDecodeInt == 1 {
-		needDecode = true
-	}
+	encodeType := new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
+
 	off := new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
 	len := new(big.Int).SetBytes(getData(input, 96, 32)).Uint64()
 	hash := input[128:160]
 
-	return getBlobFromEsNode(kvIndex, hash, needDecode, off, len)
+	return getBlobFromEsNode(kvIndex, hash, DecodeType(encodeType), off, len)
 }
 
-func getBlobFromEsNode(kvIndex uint64, blobHash []byte, needDecode bool, off, len uint64) ([]byte, error) {
+func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, off, len uint64) ([]byte, error) {
 	var err error
 	ctx := context.Background()
 	if rpcCli == nil {
@@ -1216,6 +1220,7 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, needDecode bool, off, le
 		callCtx,
 		&result,
 		"es_getBlob",
-		kvIndex, "0x"+common.Bytes2Hex(blobHash), needDecode, off, len)
+		kvIndex, "0x"+common.Bytes2Hex(blobHash), encodeType, off, len)
+
 	return result, err
 }

@@ -47,7 +47,7 @@ func memoryGasCost(evm *EVM, mem *Memory, newMemSize uint64) (uint64, error) {
 		quadCoef := square / params.QuadCoeffDiv
 		if evm != nil && evm.Config.IsEthStorage {
 			quadCoef = 0
-			linCoef = newMemSizeWords * params.ESMemoryGas
+			linCoef = newMemSizeWords * params.MemoryGas
 		}
 		newTotalFee := linCoef + quadCoef
 
