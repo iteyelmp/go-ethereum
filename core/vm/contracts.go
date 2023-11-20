@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/bls12381"
 	"github.com/ethereum/go-ethereum/crypto/bn256"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
 	"golang.org/x/crypto/ripemd160"
@@ -1209,6 +1210,7 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, o
 		rpcCli, err = rpc.DialContext(dialCtx, params.EsNodeURL)
 		cancel()
 		if err != nil {
+			log.Info("getBlobFromEsNode", "-----rpcCli error-----", err)
 			return []byte{}, err
 		}
 	}
@@ -1222,5 +1224,6 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, o
 		"es_getBlob",
 		kvIndex, "0x"+common.Bytes2Hex(blobHash), encodeType, off, len)
 
+	log.Info("getBlobFromEsNode", "-----error-----", err)
 	return result, err
 }
