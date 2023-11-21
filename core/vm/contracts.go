@@ -1203,6 +1203,7 @@ func (e *esGetBlob) Run(input []byte) ([]byte, error) {
 }
 
 func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, off, len uint64) ([]byte, error) {
+	ts := time.Now()
 	var err error
 	ctx := context.Background()
 	if rpcCli == nil {
@@ -1210,7 +1211,7 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, o
 		rpcCli, err = rpc.DialContext(dialCtx, params.EsNodeURL)
 		cancel()
 		if err != nil {
-			log.Info("getBlobFromEsNode", "-----rpcCli error-----", err)
+			log.Info("getBlobFromEsNode", "-----rpcCli error-----", err, "kvIndex:", kvIndex)
 			return []byte{}, err
 		}
 	}
@@ -1224,6 +1225,6 @@ func getBlobFromEsNode(kvIndex uint64, blobHash []byte, encodeType DecodeType, o
 		"es_getBlob",
 		kvIndex, "0x"+common.Bytes2Hex(blobHash), encodeType, off, len)
 
-	log.Info("getBlobFromEsNode", "-----error-----", err)
+	log.Info("getBlobFromEsNode", "-----get blob time:-----", time.Since(ts).Milliseconds())
 	return result, err
 }

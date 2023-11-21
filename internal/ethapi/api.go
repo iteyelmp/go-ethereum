@@ -1059,6 +1059,7 @@ func (context *ChainContext) GetHeader(hash common.Hash, number uint64) *types.H
 }
 
 func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.StateDB, header *types.Header, overrides *StateOverride, blockOverrides *BlockOverrides, timeout time.Duration, globalGasCap uint64) (*core.ExecutionResult, error) {
+	ts := time.Now()
 	if err := overrides.Apply(state); err != nil {
 		return nil, err
 	}
@@ -1106,6 +1107,8 @@ func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.S
 
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
+		// timeout
+		log.Info("doCall", "-----doCall time:-----", time.Since(ts).Milliseconds())
 		return nil, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 	if err != nil {
