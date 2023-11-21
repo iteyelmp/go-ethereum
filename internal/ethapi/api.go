@@ -1114,6 +1114,7 @@ func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.S
 	if err != nil {
 		return result, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
 	}
+	log.Info("doCall", "-----doCall success time:-----", time.Since(ts).Milliseconds())
 	return result, nil
 }
 
