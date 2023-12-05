@@ -1059,6 +1059,7 @@ func (context *ChainContext) GetHeader(hash common.Hash, number uint64) *types.H
 }
 
 func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.StateDB, header *types.Header, overrides *StateOverride, blockOverrides *BlockOverrides, timeout time.Duration, globalGasCap uint64) (*core.ExecutionResult, error) {
+	ts := time.Now()
 	if err := overrides.Apply(state); err != nil {
 		return nil, err
 	}
@@ -1083,7 +1084,12 @@ func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.S
 	if blockOverrides != nil {
 		blockOverrides.Apply(&blockCtx)
 	}
-	evm, vmError := b.GetEVM(ctx, msg, state, header, &vm.Config{NoBaseFee: true}, &blockCtx)
+
+	var isEthStorage = false
+	if ctx.Value(esKey{}) == true {
+		isEthStorage = true
+	}
+	evm, vmError := b.GetEVM(ctx, msg, state, header, &vm.Config{NoBaseFee: true, IsEthStorage: isEthStorage}, &blockCtx)
 
 	// Wait for the context to be done and cancel the evm. Even if the
 	// EVM has finished, cancelling may be done (repeatedly)
@@ -1101,11 +1107,14 @@ func doCall(ctx context.Context, b Backend, args TransactionArgs, state *state.S
 
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
+		// timeout
+		log.Info("doCall", "-----doCall time:-----", time.Since(ts).Milliseconds())
 		return nil, fmt.Errorf("execution aborted (timeout = %v)", timeout)
 	}
 	if err != nil {
 		return result, fmt.Errorf("err: %w (supplied gas %d)", err, msg.GasLimit)
 	}
+	log.Info("doCall", "-----doCall success time:-----", time.Since(ts).Milliseconds())
 	return result, nil
 }
 
@@ -1185,6 +1194,14 @@ func executeEstimate(ctx context.Context, b Backend, args TransactionArgs, state
 		return true, nil, err // Bail out
 	}
 	return result.Failed(), result, nil
+}
+
+type esKey struct{}
+
+// EsCall is similar with Call, and support EthStorage precompiles
+func (s *BlockChainAPI) EsCall(ctx context.Context, args TransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *StateOverride, blockOverrides *BlockOverrides) (hexutil.Bytes, error) {
+	ctx = context.WithValue(ctx, esKey{}, true)
+	return s.Call(ctx, args, blockNrOrHash, overrides, blockOverrides)
 }
 
 // DoEstimateGas returns the lowest possible gas limit that allows the transaction to run
